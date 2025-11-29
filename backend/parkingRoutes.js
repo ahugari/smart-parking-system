@@ -54,6 +54,12 @@ router.post('/yards/:yardId/slots', async (req, res) => {
         };
         await ParkingSlot.insertOne(slot);
 
+        await ParkingYard.findByIdAndUpdate(
+            req.params.yardId,
+            { totalSlots: totalSlots + 1 },
+            { new: true }
+        );
+
         res.status(201).json(slot);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -73,22 +79,33 @@ router.get('/yards/:yardId/slots', async (req, res) => {
 router.put('/yards/:yardId/slots/:slotId', async (req, res) => {
     try {
         const { status } = req.body;
-        const slot = await ParkingSlot.findByIdAndUpdate(
-            req.params.slotId, {
-            'status.isOccupied': status.isOccupied,
-            'status.vehicleInfo': status.vehicleInfo,
-            $push: {
-                occupancyHistory: {
-                    entryTime: new Date()
-                }
-            }
-        },
-            { new: true }
-        );
 
+        const slot = await ParkingSlot.findById(req.params.slotId);
         if (!slot) {
             res.status(400).json({ message: "Slot not found" });
         }
+        if (slot.status.isOccupied !== status.isOccupied) {
+            slot.status.isOccupied = status.isOccupied;
+            if (status.isOccupied) {
+                slot.status.vehicleInfo = {
+                    entryTime: new Date(status.vehicleInfo.entryTime)
+                };
+            } else {
+                if (slot.status.vehicleInfo?.entryTime) {
+                    const duration = new Date(status.vehicleInfo.exitTime) - slot.status.vehicleInfo.entryTime;
+                    slot.status.vehicleInfo.exitTime = new Date(status.vehicleInfo.exitTime);
+                    slot.occupancyHistory.push({
+                        entryTime: slot.status.vehicleInfo.entryTime,
+                        exitTime: new Date(),
+                        duration: duration / (1000 * 60)
+                    });
+
+                    slot.status.vehicleInfo = null // empty the vehicle info when vehicle leaves
+                }
+            }
+        }
+
+        await slot.save();
 
         //event event for realtime update
         io.emit('slotStatusUpdated', slot);
@@ -105,7 +122,7 @@ router.get('/yards/:yardId/slots/:slotId/sensor-status', async (req, res) => {
             res.status(400).json({ message: "Slot not found" });
         }
 
-        if (slot.yardId !== req.params.yardId) {
+        if (slot.yardId != req.params.yardId) {
             res.status(400).json({ message: "Invalid slot" });
         }
 

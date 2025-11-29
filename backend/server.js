@@ -73,7 +73,9 @@ class ParkingServer {
             const slots = Array.from({ length: newYard.totalSlots }, (_, i) => ({
                 yardId: newYard._id,
                 slotNumber: i + 1,
-                isOccupied: false,
+                status: {
+                    isOccupied: false,
+                },
                 sensors: [{
                     type: 'ultrasonic',
                     status: 'operational',
