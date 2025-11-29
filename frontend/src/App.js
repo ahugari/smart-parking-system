@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import io from 'socket.io-client';
+import axios from 'axios';
 
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -802,16 +803,10 @@ const ParkingSlotView = ({ parkingSlots, onBack, handleSlotClick, handleGpsClick
 
 );
 
-const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick }) => {
-  const availableSpaces = parkingSpaces.reduce((acc, space) => {
-    const availableSlots = space.slots.filter(slot => !slot.isOccupied).length;
-    return acc + availableSlots;
-  }, 0);
+const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick, parkingSlots }) => {
+  const availableSpaces = parkingSlots.length;
+  const occupiedSpaces = parkingSlots.filter(slot => slot.isOccupied).length;
 
-  const occupiedSpaces = parkingSpaces.reduce((acc, space) => {
-    const occupiedSlots = space.slots.filter(slot => slot.isOccupied).length;
-    return acc + occupiedSlots;
-  }, 0);
   return (
     <MainContent>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
@@ -831,9 +826,10 @@ const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick }) => {
         {parkingSpaces.length === 0
           ? <div>Loading parking spaces...</div>
           : parkingSpaces.map(space => {
-            const available = space.slots.filter(slot => !slot.isOccupied).length;
-            const occupied = space.slots.filter(slot => slot.isOccupied).length;
-            const occupancyRate = (occupied / space.slots.length * 100).toFixed(0);
+            const yardSlots = parkingSlots.filter(slot => slot.yardId === space._id);
+            const available = yardSlots.filter(slot => !slot.isOccupied).length;
+            const occupied = yardSlots.filter(slot => slot.isOccupied).length;
+            const occupancyRate = (occupied / yardSlots.length * 100).toFixed(0);
             return (
               <ParkingSpaceCard key={space.name} onClick={() => handleSpaceClick(space)}>
                 <h3>{space.name}</h3>
@@ -886,49 +882,9 @@ const MapModalView = ({ slot, onClose }) => (
 
 function App() {
   const [view, setView] = useState('spaces');
-  const [parkingSpaces, setParkingSpaces] = useState(
-    [{
-      id: 1,
-      name: "School",
-      slots: Array.from({ length: 20 }, (_, index) => {
-        const isOccupied = Math.random() < 0.5;
-        return {
-          slotNumber: index + 1,
-          isOccupied: isOccupied,
-          vehicleInfo: isOccupied ? { entryTime: new Date(Date.now() - Math.floor(Math.random * 10000000)) } : null,
-          lng: 49 + (Math.random() - 0.5) * 0.01,
-          lat: 23 + (Math.random() - 0.5) * 0.01,
-        }
-      })
-    },
-    {
-      id: 2,
-      name: "Home",
-      slots: Array.from({ length: 20 }, (_, index) => {
-        const isOccupied = Math.random() < 0.5;
-        return {
-          slotNumber: index + 1,
-          isOccupied: isOccupied,
-          vehicleInfo: isOccupied ? { entryTime: new Date(Date.now() - Math.floor(Math.random * 10000000)) } : null,
-          lng: 49 + (Math.random() - 0.5) * 0.01,
-          lat: -23 + (Math.random() - 0.5) * 0.01,
-        }
-      })
-    }]
-  );
+  const [parkingSpaces, setParkingSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
-  const [parkingSlots, setParkingSlots] = useState(
-    Array.from({ length: 20 }, (_, index) => {
-      const isOccupied = Math.random() < 0.5;
-      return {
-        slotNumber: index + 1,
-        isOccupied: isOccupied,
-        vehicleInfo: isOccupied ? { entryTime: new Date() } : null,
-        lng: 49,
-        lat: 23
-      }
-    })
-  );
+  const [parkingSlots, setParkingSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
 
@@ -936,6 +892,27 @@ function App() {
 
 
   useEffect(() => {
+
+    const fetchParkingYards = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/yards');
+        setParkingSpaces(response.data);
+      } catch (error) {
+        console.log("error while fetching parking yards: ", error);
+      }
+    };
+    const fetchParkingSlots = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/slots');
+        setParkingSlots(response.data);
+      } catch (error) {
+        console.log("error while fetching parking slots: ", error);
+      }
+    };
+
+    fetchParkingYards();
+    fetchParkingSlots();
+
     socket.on('parkingStatus', (slots) => {
       setParkingSlots(slots);
     });
@@ -1046,7 +1023,8 @@ function App() {
         </GameHeader>
         <ParkingSpacesView
           parkingSpaces={parkingSpaces}
-          handleSpaceClick={handleSpaceClick} />
+          handleSpaceClick={handleSpaceClick}
+          parkingSlots={parkingSlots} />
         <Footer>
           Smart Parking Management System - Real-time monitoring
         </Footer>
