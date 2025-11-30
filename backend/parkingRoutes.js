@@ -1,16 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const http = require('http');
-const socketIo = require('socket.io');
-const cors = require('cors');
 
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
 const router = express.Router();
-
-app.use(cors());
-app.use(express.json());
 
 mongoose.connect('mongodb://localhost:27017/smart-parking', {
     useNewUrlParser: true,
@@ -19,166 +10,178 @@ mongoose.connect('mongodb://localhost:27017/smart-parking', {
 
 const { ParkingSlot, ParkingYard } = require('./models/ParkingModels');
 
-router.post('/yards', async (req, res) => {
-    try {
-        const yard = new ParkingYard(req.body);
-        await yard.save();
+module.exports = (io) => {
 
-        //generate slots from new yard
-        const slots = Array.from({ length: yard.totalSlots }, (_, i) => ({
-            yardId: yard._id,
-            slotNumber: i + 1,
-        }));
+    router.post('/yards', async (req, res) => {
+        try {
+            const yard = new ParkingYard(req.body);
+            await yard.save();
 
-        await ParkingSlot.insertMany(slots);
-        res.status(201).json(yard);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-router.get('/yards', async (req, res) => {
-    try {
-        const yards = await ParkingYard.find();
+            //generate slots from new yard
+            const slots = Array.from({ length: yard.totalSlots }, (_, i) => ({
+                yardId: yard._id,
+                slotNumber: i + 1,
+            }));
 
-        res.json(yards);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-router.post('/yards/:yardId/slots', async (req, res) => {
-    try {
-        const totalSlots = await ParkingSlot.find({ yardId: req.params.yardId });
-        const slot = {
-            yardId: req.params.yardId,
-            slotNumber: totalSlots + 1,
-        };
-        await ParkingSlot.insertOne(slot);
-
-        await ParkingYard.findByIdAndUpdate(
-            req.params.yardId,
-            { totalSlots: totalSlots + 1 },
-            { new: true }
-        );
-
-        res.status(201).json(slot);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-router.get('/yards/:yardId/slots', async (req, res) => {
-    try {
-        const slots = await ParkingSlot.find({
-            yardId: req.params.yardId
-        });
-
-        res.json(slots);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-router.put('/yards/:yardId/slots/:slotId', async (req, res) => {
-    try {
-        const { status } = req.body;
-
-        const slot = await ParkingSlot.findById(req.params.slotId);
-        if (!slot) {
-            res.status(400).json({ message: "Slot not found" });
+            await ParkingSlot.insertMany(slots);
+            res.status(201).json(yard);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
         }
-        if (slot.status.isOccupied !== status.isOccupied) {
-            slot.status.isOccupied = status.isOccupied;
-            if (status.isOccupied) {
-                slot.status.vehicleInfo = {
-                    entryTime: new Date(status.vehicleInfo.entryTime)
-                };
-            } else {
-                if (slot.status.vehicleInfo?.entryTime) {
-                    const duration = new Date(status.vehicleInfo.exitTime) - slot.status.vehicleInfo.entryTime;
-                    slot.status.vehicleInfo.exitTime = new Date(status.vehicleInfo.exitTime);
-                    slot.occupancyHistory.push({
-                        entryTime: slot.status.vehicleInfo.entryTime,
-                        exitTime: new Date(),
-                        duration: duration / (1000 * 60)
-                    });
+    });
+    router.get('/yards', async (req, res) => {
+        try {
+            const yards = await ParkingYard.find();
 
-                    slot.status.vehicleInfo = null // empty the vehicle info when vehicle leaves
+            res.json(yards);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    });
+    router.get('/slots', async (req, res) => {
+        try {
+            const slots = await ParkingSlot.find();
+
+            res.json(slots);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    });
+    router.post('/yards/:yardId/slots', async (req, res) => {
+        try {
+            const totalSlots = await ParkingSlot.find({ yardId: req.params.yardId });
+            const slot = {
+                yardId: req.params.yardId,
+                slotNumber: totalSlots + 1,
+            };
+            await ParkingSlot.insertOne(slot);
+
+            await ParkingYard.findByIdAndUpdate(
+                req.params.yardId,
+                { totalSlots: totalSlots + 1 },
+                { new: true }
+            );
+
+            res.status(201).json(slot);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    });
+    router.get('/yards/:yardId/slots', async (req, res) => {
+        try {
+            const slots = await ParkingSlot.find({
+                yardId: req.params.yardId
+            });
+
+            res.json(slots);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    });
+    router.put('/yards/:yardId/slots/:slotId', async (req, res) => {
+        try {
+            const { status } = req.body;
+
+            const slot = await ParkingSlot.findById(req.params.slotId);
+            if (!slot) {
+                res.status(400).json({ message: "Slot not found" });
+            }
+            if (slot.status.isOccupied !== status.isOccupied) {
+                slot.status.isOccupied = status.isOccupied;
+                if (status.isOccupied) {
+                    slot.status.vehicleInfo = {
+                        entryTime: new Date(status.vehicleInfo.entryTime)
+                    };
+                } else {
+                    if (slot.status.vehicleInfo?.entryTime) {
+                        const duration = new Date(status.vehicleInfo.exitTime) - slot.status.vehicleInfo.entryTime;
+                        slot.status.vehicleInfo.exitTime = new Date(status.vehicleInfo.exitTime);
+                        slot.occupancyHistory.push({
+                            entryTime: slot.status.vehicleInfo.entryTime,
+                            exitTime: new Date(),
+                            duration: duration / (1000 * 60)
+                        });
+
+                        slot.status.vehicleInfo = null // empty the vehicle info when vehicle leaves
+                    }
                 }
             }
+
+            await slot.save();
+
+            //event event for realtime update
+            io.emit('slotStatusUpdated', slot);
+
+            res.json(slot);
+        } catch (error) {
+            res.status(500).json({ message: error.message });
         }
+    });
+    router.get('/yards/:yardId/slots/:slotId/sensor-status', async (req, res) => {
+        try {
+            const slot = await ParkingSlot.findById(req.params.slotId);
+            if (!slot) {
+                res.status(400).json({ message: "Slot not found" });
+            }
 
-        await slot.save();
+            if (slot.yardId != req.params.yardId) {
+                res.status(400).json({ message: "Invalid slot" });
+            }
 
-        //event event for realtime update
-        io.emit('slotStatusUpdated', slot);
+            const sensorStatus = slot.sensors.map(sensor => ({
+                type: sensor.type,
+                status: sensor.status,
+                lastChecked: sensor.lastChecked
+            }));
 
-        res.json(slot);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-router.get('/yards/:yardId/slots/:slotId/sensor-status', async (req, res) => {
-    try {
-        const slot = await ParkingSlot.findById(req.params.slotId);
-        if (!slot) {
-            res.status(400).json({ message: "Slot not found" });
+            res.json(sensorStatus);
+        } catch (error) {
+            res.status(500).json({ message: error.message });
         }
+    });
+    router.get('/statistics/yards/', async (req, res) => {
+        try {
+            const yardId = req.params.yardId;
 
-        if (slot.yardId != req.params.yardId) {
-            res.status(400).json({ message: "Invalid slot" });
+            const totalSlots = await ParkingSlot.countDocuments();
+            const occupiedSlots = await ParkingSlot.countDocuments({
+                'status.isOccupied': true
+            });
+
+            const occupancyRate = (occupiedSlots / totalSlots) * 100;
+
+            res.json({
+                totalSlots,
+                occupiedSlots,
+                occupancyRate
+            });
+
+        } catch (error) {
+            res.status(500).json({ message: error.message });
         }
+    });
+    router.get('/statistics/yards/:yardId/', async (req, res) => {
+        try {
+            const yardId = req.params.yardId;
 
-        const sensorStatus = slot.sensors.map(sensor => ({
-            type: sensor.type,
-            status: sensor.status,
-            lastChecked: sensor.lastChecked
-        }));
+            const totalSlots = await ParkingSlot.countDocuments({ yardId });
+            const occupiedSlots = await ParkingSlot.countDocuments({
+                yardId,
+                'status.isOccupied': true
+            });
 
-        res.json(sensorStatus);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-router.get('/statistics/yards/', async (req, res) => {
-    try {
-        const yardId = req.params.yardId;
+            const occupancyRate = (occupiedSlots / totalSlots) * 100;
 
-        const totalSlots = await ParkingSlot.countDocuments();
-        const occupiedSlots = await ParkingSlot.countDocuments({
-            'status.isOccupied': true
-        });
+            res.json({
+                totalSlots,
+                occupiedSlots,
+                occupancyRate
+            });
 
-        const occupancyRate = (occupiedSlots / totalSlots) * 100;
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    });
 
-        res.json({
-            totalSlots,
-            occupiedSlots,
-            occupancyRate
-        });
-
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-router.get('/statistics/yards/:yardId/', async (req, res) => {
-    try {
-        const yardId = req.params.yardId;
-
-        const totalSlots = await ParkingSlot.countDocuments({ yardId });
-        const occupiedSlots = await ParkingSlot.countDocuments({
-            yardId,
-            'status.isOccupied': true
-        });
-
-        const occupancyRate = (occupiedSlots / totalSlots) * 100;
-
-        res.json({
-            totalSlots,
-            occupiedSlots,
-            occupancyRate
-        });
-
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-module.exports = router;
+    return router;
+};

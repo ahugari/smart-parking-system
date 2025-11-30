@@ -766,8 +766,8 @@ const ParkingSlotView = ({ parkingSlots, onBack, handleSlotClick, handleGpsClick
       ? <div>Loading parking slots...</div>
       : parkingSlots.map(slot =>
         <ParkingSlotCard
-          key={slot.slotNumber}
-          isOccupied={slot.isOccupied}
+          key={slot._id}
+          isOccupied={slot.status.isOccupied}
           slot={slot}
           onClick={() => handleSlotClick(slot)}
           handleGpsClick={handleGpsClick}
@@ -777,10 +777,10 @@ const ParkingSlotView = ({ parkingSlots, onBack, handleSlotClick, handleGpsClick
             <h3>Slot {slot.slotNumber}</h3>
           </div>
           <div className='slot-info'>
-            {slot.isOccupied ? (
+            {slot.status.isOccupied ? (
               <>
                 <p><span style={{ color: COLORS.warning }}>Occupied</span></p>
-                <p>Parked at: {new Date(slot.vehicleInfo.entryTime).toLocaleTimeString()}</p>
+                <p>Parked at: {new Date(slot.status.vehicleInfo.entryTime).toLocaleTimeString()}</p>
               </>
             ) : (
               <p><span style={{ color: COLORS.success }}>Available</span></p>
@@ -805,7 +805,7 @@ const ParkingSlotView = ({ parkingSlots, onBack, handleSlotClick, handleGpsClick
 
 const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick, parkingSlots }) => {
   const availableSpaces = parkingSlots.length;
-  const occupiedSpaces = parkingSlots.filter(slot => slot.isOccupied).length;
+  const occupiedSpaces = parkingSlots.filter(slot => slot.status.isOccupied).length;
 
   return (
     <MainContent>
@@ -827,8 +827,8 @@ const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick, parkingSlots }) =>
           ? <div>Loading parking spaces...</div>
           : parkingSpaces.map(space => {
             const yardSlots = parkingSlots.filter(slot => slot.yardId === space._id);
-            const available = yardSlots.filter(slot => !slot.isOccupied).length;
-            const occupied = yardSlots.filter(slot => slot.isOccupied).length;
+            const available = yardSlots.filter(slot => !slot.status.isOccupied).length;
+            const occupied = yardSlots.filter(slot => slot.status.isOccupied).length;
             const occupancyRate = (occupied / yardSlots.length * 100).toFixed(0);
             return (
               <ParkingSpaceCard key={space.name} onClick={() => handleSpaceClick(space)}>
@@ -913,8 +913,10 @@ function App() {
     fetchParkingYards();
     fetchParkingSlots();
 
-    socket.on('parkingStatus', (slots) => {
-      setParkingSlots(slots);
+    socket.on('slotStatusUpdated', (updatedSlot) => {
+      setParkingSlots(prevSlots =>
+        prevSlots.map(slot => slot._id === updatedSlot._id ? updatedSlot : slot)
+      )
     });
 
     socket.on('parkingStatusUpdate', (updatedSlot) => {

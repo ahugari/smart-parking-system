@@ -4,16 +4,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
-
-
 const { setupSocketHandlers } = require('./socketHandlers');
 const parkingRoutes = require('./parkingRoutes');
-const { reverse } = require('dns');
-const { timeStamp } = require('console');
-
 
 class ParkingServer {
     constructor() {
@@ -95,7 +87,8 @@ class ParkingServer {
     }
 
     setupRoutes() {
-        this.app.use('/api', parkingRoutes);
+        const routerWithIo = parkingRoutes(this.io);
+        this.app.use('/api', routerWithIo);
 
         this.app.use('/health', (req, res) => {
             res.json({
