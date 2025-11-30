@@ -27,7 +27,6 @@ const ParkingSlotSchema = new mongoose.Schema({
     slotNumber: {
         type: Number,
         required: true,
-        unique: true
     },
     status: {
         isOccupied: {

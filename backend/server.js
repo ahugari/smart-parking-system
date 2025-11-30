@@ -48,9 +48,9 @@ class ParkingServer {
     async initializeDefaultYard() {
         const { ParkingSlot, ParkingYard } = require('./models/ParkingModels');
 
-        const existingYard = await ParkingYard.findOne({ name: "Home" });
+        const existingHomeYard = await ParkingYard.findOne({ name: "Home" });
 
-        if (!existingYard) {
+        if (!existingHomeYard) {
             const newYard = new ParkingYard({
                 name: "Home",
                 location: {
@@ -89,7 +89,51 @@ class ParkingServer {
 
             await ParkingSlot.insertMany(slots);
 
-            console.log("default yard created successfully");
+            console.log("default home yard created successfully");
+        }
+
+        const existingSchoolYard = await ParkingYard.findOne({ name: "School" });
+
+        if (!existingSchoolYard) {
+            const newYard = new ParkingYard({
+                name: "School",
+                location: {
+                    longitude: -1.935111,
+                    latitude: 30.158601
+                },
+                totalSlots: 20
+            });
+
+            await newYard.save();
+
+            const slots = Array.from({ length: newYard.totalSlots }, (_, i) => {
+                const isOccupied = Math.random() < 0.6;
+                const slot = {
+                    yardId: newYard._id,
+                    slotNumber: i + 1,
+                    status: {
+                        isOccupied: isOccupied,
+                        vehicleInfo: {
+                            entryTime: isOccupied ? new Date() : null
+                        }
+                    },
+                    sensors: [{
+                        type: 'ultrasonic',
+                        status: 'operational',
+                        lastChecked: new Date()
+                    },
+                    {
+                        type: 'proximity',
+                        status: 'operational',
+                        lastChecked: new Date()
+                    }]
+                }
+                return slot;
+            });
+
+            await ParkingSlot.insertMany(slots);
+
+            console.log("default school yard created successfully");
         }
     }
 

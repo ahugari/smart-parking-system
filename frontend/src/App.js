@@ -999,7 +999,7 @@ function App() {
           </NavigationBar>
         </GameHeader>
         <ParkingSlotView
-          parkingSlots={parkingSlots}
+          parkingSlots={selectedSpace ? parkingSlots.filter(slot => slot.yardId === selectedSpace._id) : []}
           onBack={handleBack}
           handleSlotClick={handleSlotClick}
           handleGpsClick={handleGpsClick}
