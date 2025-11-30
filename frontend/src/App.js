@@ -6,6 +6,9 @@ import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
+import cmuBackground from './assets/cmu.jpg';
+import kigaliBackground from './assets/kigali.jpg';
+
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png'
@@ -374,12 +377,12 @@ const ParkingSpace = styled.div`
 `;
 
 const ParkingSpaceCard = styled.div`
-  background: rgbe(36, 48, 102, 0.6);
+  background: rgba(36, 48, 102, 0.9);
   border-radius: 12px;
   padding: 25px;
   text-align: center;
   color: white;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease-in-out;
   cursor: pointer;
   box-shadow: 0 8px 25px rgba(0,0,0,0.3);
   backdrop-filter: blur(5px);
@@ -387,10 +390,19 @@ const ParkingSpaceCard = styled.div`
   animation: ${fadeIn} 0.5s ease-out;
   position: relative;
   overflow: hidden;
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
+  background-image: ${props =>
+    props.name === "School" ? `url(${cmuBackground})` :
+      props.name === "Home" ? `url(${kigaliBackground})` : 'none'
+  };
+  background-size: 190% 100%;
+  background-position: center center;
 
   &:hover {
     transform: translateY(-8px);
     box-shadow: 0 15px 35px rgba(74, 103, 255, 0.25);
+    background-size: 195% 105%;
   }
 
   &:before {
@@ -421,6 +433,19 @@ const ParkingSpaceCard = styled.div`
     justify-content: space-between;
     font-size: 0.9rem;
     color: ${COLORS.textMedium}
+  }
+
+  .new-space{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    color: ${COLORS.textMedium};
+    height: 100%;
+  }
+
+  .new-sign{
+    font-size: 9rem;
   }
 
   .span {
@@ -831,7 +856,7 @@ const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick, parkingSlots }) =>
             const occupied = yardSlots.filter(slot => slot.status.isOccupied).length;
             const occupancyRate = (occupied / yardSlots.length * 100).toFixed(0);
             return (
-              <ParkingSpaceCard key={space.name} onClick={() => handleSpaceClick(space)}>
+              <ParkingSpaceCard key={space.name} onClick={() => handleSpaceClick(space)} name={space.name}>
                 <h3>{space.name}</h3>
                 <div className="space-info">
                   <span className='available'>Available: {available}</span>
@@ -851,6 +876,11 @@ const ParkingSpacesView = ({ parkingSpaces, handleSpaceClick, parkingSlots }) =>
             )
           }
           )}
+        <ParkingSpaceCard onClick={() => handleSpaceClick()}>
+          <div className="new-space">
+            <span className='new-sign'>+</span>
+          </div>
+        </ParkingSpaceCard>
       </ParkingSpaceContainer>
     </MainContent>
   );
