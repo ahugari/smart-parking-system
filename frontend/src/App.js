@@ -625,13 +625,13 @@ const Tab = styled.button`
 
 const calculateStatistics = (slots, spaces = []) => {
   const totalSlots = slots.length;
-  const occupiedSlots = slots.filter(slot => slot.isOccupied).length;
+  const occupiedSlots = slots.filter(slot => slot.status.isOccupied).length;
   const availableSlots = totalSlots - occupiedSlots;
   const occupancyRate = totalSlots > 0 ? (occupiedSlots / totalSlots * 100).toFixed(1) : 0;
 
   const now = new Date();
   const lastHour = slots.filter(slot =>
-    slot.isOccupied &&
+    slot.status.isOccupied &&
     slot.vehicleInfo?.entryTime &&
     (now - new Date(slot.vehicleInfo.entryTime)) < 3600000 // 1 hour
   ).length;
@@ -969,10 +969,7 @@ function App() {
           </NavigationBar>
         </GameHeader>
         <StatisticsView
-          slots={selectedSpace ? selectedSpace.slots : parkingSpaces.reduce((acc, space) => {
-            acc.push(...space.slots);
-            return acc;
-          }, [])}
+          slots={selectedSpace ? parkingSlots.filter(slot => slot.yardId === selectedSpace._id) : parkingSlots}
           spaces={parkingSpaces}
           onBack={handleHideStatistics}
         />
