@@ -62,23 +62,30 @@ class ParkingServer {
 
             await newYard.save();
 
-            const slots = Array.from({ length: newYard.totalSlots }, (_, i) => ({
-                yardId: newYard._id,
-                slotNumber: i + 1,
-                status: {
-                    isOccupied: false,
-                },
-                sensors: [{
-                    type: 'ultrasonic',
-                    status: 'operational',
-                    lastChecked: new Date()
-                },
-                {
-                    type: 'proximity',
-                    status: 'operational',
-                    lastChecked: new Date()
-                }]
-            }));
+            const slots = Array.from({ length: newYard.totalSlots }, (_, i) => {
+                const isOccupied = Math.random() < 0.5;
+                const slot = {
+                    yardId: newYard._id,
+                    slotNumber: i + 1,
+                    status: {
+                        isOccupied: isOccupied,
+                        vehicleInfo: {
+                            entryTime: isOccupied ? new Date() : null
+                        }
+                    },
+                    sensors: [{
+                        type: 'ultrasonic',
+                        status: 'operational',
+                        lastChecked: new Date()
+                    },
+                    {
+                        type: 'proximity',
+                        status: 'operational',
+                        lastChecked: new Date()
+                    }]
+                }
+                return slot;
+            });
 
             await ParkingSlot.insertMany(slots);
 
