@@ -55,27 +55,29 @@ function checkSlot1() {
     console.log(`Ultrasonic_1: ${distance >= 0 ? distance.toFixed(2) : "-1"} cm`);
     console.log(`Status: ${newStatus}`);
 
-    if (newStatus !== previousStatus) {
-        console.log(`>>> STATUS CHANGE: ${previousStatus} → ${newStatus}`);
-        slotStatus["SLOT_1"] = newStatus;
-
-        if (newStatus === "OCCUPIED") {
-            axios.put('http://172.20.10.3:5000/api/slots/' + slot1_id, {
-                isOccupied: true,
-                vehicleInfo: {
-                    entryTime: new Date().toISOString()
-                }
-            });
-            
-        } else {
-            axios.put('http://172.20.10.3:5000/api/slots/' + slot1_id, {
-                isOccupied: false,
-                vehicleInfo: {
-                    exitTime: new Date().toISOString()
-                }
-            });
+        if (newStatus !== previousStatus) {
+            console.log(`>>> STATUS CHANGE: ${previousStatus} → ${newStatus}`);
+            slotStatus["SLOT_1"] = newStatus;
+    
+            if (newStatus === "OCCUPIED") {
+                axios.put('http://172.20.10.3:5000/api/slots/' + slot1_id, {
+                    isOccupied: true,
+                    vehicleInfo: {
+                        entryTime: new Date().toISOString()
+                    }
+                });
+                
+            } else {
+                axios.put('http://172.20.10.3:5000/api/slots/' + slot1_id, {
+                    isOccupied: false,
+                    vehicleInfo: {
+                        exitTime: new Date().toISOString()
+                    }
+                });
+            }
+        }
     }
-}
+
 
 /**
  * SLOT 2 CHECKER
