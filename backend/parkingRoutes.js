@@ -1,9 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
-
+const { dbBaseUrl } = require('./helpers');
 const router = express.Router();
 
-mongoose.connect('mongodb://localhost:27017/smart-parking', {
+mongoose.connect(dbBaseUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 });
@@ -71,6 +71,18 @@ module.exports = (io) => {
         try {
             const slots = await ParkingSlot.find({
                 yardId: req.params.yardId
+            });
+
+            res.json(slots);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    });
+    router.get('/yards/:yardId/slots/available', async (req, res) => {
+        try {
+            const slots = await ParkingSlot.countDocuments({
+                yardId: req.params.yardId,
+                'status.isOccupied': true
             });
 
             res.json(slots);

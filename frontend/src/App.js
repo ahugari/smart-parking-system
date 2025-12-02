@@ -24,7 +24,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: shadow
 });
 
-const socket = io('http://localhost:5000');
+const baseUrl = 'http://localhost:5000';
+
+const socket = io(baseUrl);
 
 const fadeIn = keyframes`
   from { opacity:0; transform: scale(0.95); }
@@ -902,7 +904,7 @@ const MapModalView = ({ slot, onClose }) => (
   <StyledModalOverlay>
     <StyledModalContent>
       <SectionTitle>Slot Location</SectionTitle>
-      <MapView lat={slot.lat} lng={slot.lng} slot={slot} />
+      <MapView lat={slot.location.coordinates.latitude} lng={slot.location.coordinates.longitude} slot={slot} />
       <div style={{ textAlign: 'center', marginTop: '15px' }}>
         <GButton onClick={onClose} style={{ marginTop: '13px' }}>Close map view</GButton>
       </div>
@@ -922,10 +924,9 @@ function App() {
 
 
   useEffect(() => {
-
     const fetchParkingYards = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/yards');
+        const response = await axios.get(`${baseUrl}/api/yards`);
         setParkingSpaces(response.data);
       } catch (error) {
         console.log("error while fetching parking yards: ", error);
@@ -933,7 +934,7 @@ function App() {
     };
     const fetchParkingSlots = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/slots');
+        const response = await axios.get(`${baseUrl}/api/slots`);
         setParkingSlots(response.data);
       } catch (error) {
         console.log("error while fetching parking slots: ", error);

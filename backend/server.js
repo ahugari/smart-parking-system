@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const { dbBaseUrl } = require('./helpers');
 
 const { setupSocketHandlers } = require('./socketHandlers');
 const parkingRoutes = require('./parkingRoutes');
@@ -32,7 +33,7 @@ class ParkingServer {
 
     async connectDatabase() {
         try {
-            await mongoose.connect('mongodb://localhost:27017/smart-parking', {
+            await mongoose.connect(dbBaseUrl, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
             });
@@ -82,7 +83,13 @@ class ParkingServer {
                         type: 'proximity',
                         status: 'operational',
                         lastChecked: new Date()
-                    }]
+                    }],
+                    location: {
+                        coordinates: {
+                            longitude: -1.935111,
+                            latitude: 30.158601
+                        }
+                    },
                 }
                 return slot;
             });
@@ -126,7 +133,13 @@ class ParkingServer {
                         type: 'proximity',
                         status: 'operational',
                         lastChecked: new Date()
-                    }]
+                    }],
+                    location: {
+                        coordinates: {
+                            longitude: -1.935111,
+                            latitude: 30.158601
+                        }
+                    },
                 }
                 return slot;
             });
@@ -163,7 +176,7 @@ class ParkingServer {
 const config = {
     development: {
         port: 5000,
-        mongoUri: 'mongodb://localhost:27017/smart-parking',
+        mongoUri: dbBaseUrl,
         corsOrigin: "*"
     }
 }

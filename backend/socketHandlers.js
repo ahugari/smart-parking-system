@@ -1,16 +1,7 @@
-const express = require('express');
 const mongoose = require('mongoose');
-const http = require('http');
-const socketIo = require('socket.io');
-const cors = require('cors');
+const { dbBaseUrl } = require('./helpers');
 
-const app = express();
-const server = http.createServer(app);
-
-app.use(cors());
-app.use(express.json());
-
-mongoose.connect('mongodb://localhost:27017/smart-parking', {
+mongoose.connect(dbBaseUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 });

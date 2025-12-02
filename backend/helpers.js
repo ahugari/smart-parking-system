@@ -1,0 +1,1 @@
+module.exports = { dbBaseUrl: 'mongodb://localhost:27017/smart-parking' }
