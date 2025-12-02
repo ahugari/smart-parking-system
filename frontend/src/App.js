@@ -24,7 +24,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: shadow
 });
 
-const baseUrl = 'http://localhost:5000';
+const baseUrl = 'http://172.20.10.3:5000';
 
 const socket = io(baseUrl);
 

@@ -1,2 +1,2 @@
 // 'mongodb+srv://admin:admin@smart-parking.lyseubp.mongodb.net/?retryWrites=true&w=majority&appName=smart-parking'
-module.exports = { dbBaseUrl: 'mongodb://localhost:27017/smart-parking' }
+module.exports = { dbBaseUrl:'mongodb+srv://admin:admin@smart-parking.lyseubp.mongodb.net/?retryWrites=true&w=majority&appName=smart-parking'}

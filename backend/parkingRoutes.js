@@ -131,6 +131,7 @@ module.exports = (io) => {
             res.status(400).json({ message: error.message });
         }
     });
+
     router.put('/yards/:yardId/slots/:slotId', async (req, res) => {
         try {
             const { status } = req.body;

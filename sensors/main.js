@@ -21,8 +21,11 @@ const socket = socketio.connect('http://172.20.10.3:5000');
 socket.on("connect", () => console.log("Connected to server!"));
 socket.on("connect_error", (err) => console.log("Connection Error:", err));
 
-const slot1_id = "692dc703c10f4f5a19f2e785";
-const slot2_id = "692dc703c10f4f5a19f2e788";
+const slot1_id = "692f2e0eb2e01c133a5fb828";
+const slot2_id = "692f2e0eb2e01c133a5fb868";
+
+const yard1_id = "692f2e0eb2e01c133a5fb825";
+const yard2_id = "692f2e0eb2e01c133a5fb866";    
 
 const TARGET_DISTANCE_CM = 10;
 
@@ -31,6 +34,18 @@ let slotStatus = {
     "SLOT_2": "EMPTY"
 };
 
+// Occupancy leds 
+const RED1_LED_PIN = 5;
+const GREEN1_LED_PIN = 6;
+
+const RED2_LED_PIN = 13;
+const GREEN2_LED_PIN = 19;
+
+const redLed1 = new Gpio(RED1_LED_PIN, { mode: Gpio.OUTPUT });
+const greenLed1 = new Gpio(GREEN1_LED_PIN, { mode: Gpio.OUTPUT });
+
+const redLed2 = new Gpio(RED2_LED_PIN, { mode: Gpio.OUTPUT });
+const greenLed2 = new Gpio(GREEN2_LED_PIN, { mode: Gpio.OUTPUT });
 //---------------------------------------------------------
 //  LDR LIGHTING CHECK
 //---------------------------------------------------------
@@ -52,24 +67,55 @@ setTimeout(() => lcd.clearSync(), 2000);
 //---------------------------------------------------------
 //  LCD UPDATE FUNCTION
 //---------------------------------------------------------
+
 async function updateLCD() {
     try {
-        const response = await axios.get("http://172.20.10.3:5000/api/statistics/yards/");
-        const { totalSlots, occupiedSlots } = response.data;
-        const available = totalSlots - occupiedSlots;
+        // ----- YARD 1 -----
+        const yard1Slots = await axios.get(`http://172.20.10.3:5000/api/yards/${yard1_id}/slots`);
+        const yard1Occupied = await axios.get(`http://172.20.10.3:5000/api/yards/${yard1_id}/slots/available`);
 
+        const yard1Total = yard1Slots.data.length;
+        const yard1Available = yard1Total - yard1Occupied.data;
+
+        if (yard1Available === 0) {
+            redLed1.digitalWrite(1);
+            greenLed1.digitalWrite(0);
+        } else {
+            redLed1.digitalWrite(0);
+            greenLed1.digitalWrite(1);
+        }
+
+        // ----- YARD 2 -----
+        const yard2Slots = await axios.get(`http://172.20.10.3:5000/api/yards/${yard2_id}/slots`);
+        const yard2Occupied = await axios.get(`http://172.20.10.3:5000/api/yards/${yard2_id}/slots/available`);
+
+        const yard2Total = yard2Slots.data.length;
+        const yard2Available = yard2Total - yard2Occupied.data;
+
+        if (yard2Available === 0) {
+            redLed2.digitalWrite(1);
+            greenLed2.digitalWrite(0);
+        } else {
+            redLed2.digitalWrite(0);
+            greenLed2.digitalWrite(1);
+        }
+
+        // ----- PRINT TO LCD -----
         lcd.clearSync();
-        lcd.printLineSync(0, `Available: ${available}`);
-        lcd.printLineSync(1, `Occupied: ${occupiedSlots}`);
+        lcd.printLineSync(0, `Y1 Avail: ${yard1Available}`);
+        lcd.printLineSync(1, `Y2 Avail: ${yard2Available}`);
 
-        console.log(`LCD Updated → Available: ${available}`);
-    } catch (error) {
-        console.log("LCD update failed:", error.message);
+        console.log(`LCD Updated → Y1:${yard1Available} | Y2:${yard2Available}`);        
+
+    } catch (err) {
+        console.log("LCD update failed:", err.message);
         lcd.clearSync();
         lcd.printLineSync(0, "LCD ERROR");
     }
 }
+
 setInterval(updateLCD, 2000);
+
 
 //---------------------------------------------------------
 //  SLOT 1 CHECKER
