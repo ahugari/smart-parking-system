@@ -950,6 +950,10 @@ function App() {
       )
     });
 
+    socket.on('sensorData', (slot) => {
+      fetchParkingSlots();
+    });
+
     socket.on('parkingStatusUpdate', (updatedSlot) => {
       setParkingSlots(prev => ({
         ...prev,

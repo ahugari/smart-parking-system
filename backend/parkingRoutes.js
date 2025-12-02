@@ -47,6 +47,47 @@ module.exports = (io) => {
             res.status(400).json({ message: error.message });
         }
     });
+
+    router.put('/slots/:slotId', async (req, res) => {
+        try {
+            const { status } = req.body;
+
+            const slot = await ParkingSlot.findById(req.params.slotId);
+            if (!slot) {
+                res.status(400).json({ message: "Slot not found" });
+            }
+            if (slot.status.isOccupied !== status.isOccupied) {
+                slot.status.isOccupied = status.isOccupied;
+                if (status.isOccupied) {
+                    slot.status.vehicleInfo = {
+                        entryTime: new Date(status.vehicleInfo.entryTime)
+                    };
+                } else {
+                    if (slot.status.vehicleInfo?.entryTime) {
+                        const duration = new Date(status.vehicleInfo.exitTime) - slot.status.vehicleInfo.entryTime;
+                        slot.status.vehicleInfo.exitTime = new Date(status.vehicleInfo.exitTime);
+                        slot.occupancyHistory.push({
+                            entryTime: slot.status.vehicleInfo.entryTime,
+                            exitTime: new Date(),
+                            duration: duration / (1000 * 60)
+                        });
+
+                        slot.status.vehicleInfo = null // empty the vehicle info when vehicle leaves
+                    }
+                }
+            }
+
+            await slot.save();
+
+            //event event for realtime update
+            io.emit('slotStatusUpdated', slot);
+
+            res.json(slot);
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    });
+
     router.post('/yards/:yardId/slots', async (req, res) => {
         try {
             const totalSlots = await ParkingSlot.find({ yardId: req.params.yardId });

@@ -67,8 +67,10 @@ function setupSocketHandlers(io) {
 
                     await slot.save();
 
-                    //broadcasr to all clients
-                    io.to(slot.yardId.toString()).emit('slotStatusUpdated', slot);
+                    //broadcast to all clients
+                    io.emit('slotStatusUpdated', slot);
+                    socket.broadcast.emit('sensorData', slot);
+
                 }
             } catch (error) {
                 socket.emit('error', { message: 'error processing sensor data', details: error.message });
