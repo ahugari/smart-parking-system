@@ -182,25 +182,26 @@ module.exports = (io) => {
     });
     router.get('/statistics/yards/', async (req, res) => {
         try {
-            const yardId = req.params.yardId;
-
             const totalSlots = await ParkingSlot.countDocuments();
             const occupiedSlots = await ParkingSlot.countDocuments({
                 'status.isOccupied': true
             });
 
+            const availableSlots = totalSlots - occupiedSlots;
             const occupancyRate = (occupiedSlots / totalSlots) * 100;
 
             res.json({
                 totalSlots,
                 occupiedSlots,
+                availableSlots,
                 occupancyRate
             });
-
-        } catch (error) {
-            res.status(500).json({ message: error.message });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
         }
     });
+
+
     router.get('/statistics/yards/:yardId/', async (req, res) => {
         try {
             const yardId = req.params.yardId;
