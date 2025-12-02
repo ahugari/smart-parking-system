@@ -2,30 +2,24 @@ const ultrasonic = require('./ultrasonicSensor_1.js');
 const proximity = require('./proximitySensor_1.js');
 const socketio = require('socket.io-client');
 
-
-
 const ultrasonic2 = require('./ultrasonicSensor_2.js');
 const proximity2 = require('./proximitySensor_2.js');
 
 const Gpio = require('pigpio').Gpio;
 const axios = require('axios');
 
-
 console.log("Car Parking System Initializing...");
 
 const socket = socketio.connect('http://172.20.10.3:5000');
 
-const slot1_id = "692dc703c10f4f5a19f2e785";
-const slot2_id = "692dc703c10f4f5a19f2e788";
-
 socket.on("connect", () => console.log("Connected to server!"));
 socket.on("connect_error", (err) => console.log("Connection Error:", err));
 
+const slot1_id = "692dc703c10f4f5a19f2e785";
+const slot2_id = "692dc703c10f4f5a19f2e788";
 
-// Adjust threshold based on your actual setup
 const TARGET_DISTANCE_CM = 10;
 
-// Track current slot states
 let slotStatus = {
     "SLOT_1": "EMPTY",
     "SLOT_2": "EMPTY"
@@ -36,17 +30,12 @@ let slotStatus = {
  */
 function checkSlot1() {
     const carPresentProximity = proximity.isCarPresent();
-
     let distance = ultrasonic.getDistance();
+
     if (typeof distance !== "number" || isNaN(distance)) distance = -1;
 
-    const carPresentUltrasonic =
-        distance > 0 &&
-        distance < TARGET_DISTANCE_CM;
-
-    const newStatus = (carPresentProximity && carPresentUltrasonic)
-        ? "OCCUPIED"
-        : "EMPTY";
+    const carPresentUltrasonic = (distance > 0 && distance < TARGET_DISTANCE_CM);
+    const newStatus = (carPresentProximity && carPresentUltrasonic) ? "OCCUPIED" : "EMPTY";
 
     const previousStatus = slotStatus["SLOT_1"];
 
@@ -55,28 +44,27 @@ function checkSlot1() {
     console.log(`Ultrasonic_1: ${distance >= 0 ? distance.toFixed(2) : "-1"} cm`);
     console.log(`Status: ${newStatus}`);
 
-        if (newStatus !== previousStatus) {
-            console.log(`>>> STATUS CHANGE: ${previousStatus} → ${newStatus}`);
-            slotStatus["SLOT_1"] = newStatus;
-    
-            if (newStatus === "OCCUPIED") {
-                axios.put('http://172.20.10.3:5000/api/slots/' + slot1_id, {
+    if (newStatus !== previousStatus) {
+        console.log(`>>> STATUS CHANGE: ${previousStatus} → ${newStatus}`);
+        slotStatus["SLOT_1"] = newStatus;
+
+        if (newStatus === "OCCUPIED") {
+            axios.put(`http://172.20.10.3:5000/api/slots/${slot1_id}`, {
+                status: {
                     isOccupied: true,
-                    vehicleInfo: {
-                        entryTime: new Date().toISOString()
-                    }
-                });
-                
-            } else {
-                axios.put('http://172.20.10.3:5000/api/slots/' + slot1_id, {
+                    vehicleInfo: { entryTime: new Date().toISOString() }
+                }
+            });
+        } else {
+            axios.put(`http://172.20.10.3:5000/api/slots/${slot1_id}`, {
+                status: {
                     isOccupied: false,
-                    vehicleInfo: {
-                        exitTime: new Date().toISOString()
-                    }
-                });
-            }
+                    vehicleInfo: { exitTime: new Date().toISOString() }
+                }
+            });
         }
     }
+}
 
 
 /**
@@ -84,17 +72,12 @@ function checkSlot1() {
  */
 function checkSlot2() {
     const carPresentProximity = proximity2.isCarPresent();
-
     let distance = ultrasonic2.getDistance();
+
     if (typeof distance !== "number" || isNaN(distance)) distance = -1;
 
-    const carPresentUltrasonic =
-        distance > 0 &&
-        distance < TARGET_DISTANCE_CM;
-
-    const newStatus = (carPresentProximity && carPresentUltrasonic)
-        ? "OCCUPIED"
-        : "EMPTY";
+    const carPresentUltrasonic = (distance > 0 && distance < TARGET_DISTANCE_CM);
+    const newStatus = (carPresentProximity && carPresentUltrasonic) ? "OCCUPIED" : "EMPTY";
 
     const previousStatus = slotStatus["SLOT_2"];
 
@@ -108,32 +91,28 @@ function checkSlot2() {
         slotStatus["SLOT_2"] = newStatus;
 
         if (newStatus === "OCCUPIED") {
-            socket.emit('sensorData', {
-            slotId: slot2_id,
-            isOccupied: true,
-            timestamp: new Date().toISOString()
-        });
-        console.log("Emitted occupied for slot 2");
-
+            axios.put(`http://172.20.10.3:5000/api/slots/${slot2_id}`, {
+                status: {
+                    isOccupied: true,
+                    vehicleInfo: { entryTime: new Date().toISOString() }
+                }
+            });
         } else {
-            socket.emit('sensorData', {
-            slotId: slot2_id,
-            isOccupied: false,
-            timestamp: new Date().toISOString()
-});
+            axios.put(`http://172.20.10.3:5000/api/slots/${slot2_id}`, {
+                status: {
+                    isOccupied: false,
+                    vehicleInfo: { exitTime: new Date().toISOString() }
+                }
+            });
         }
     }
 }
 
 
-// Run every 2 seconds
-const intervalId = setInterval(() => {
-    checkSlot1();
-}, 2000);
+// Run sensors every 2 seconds
+const intervalId = setInterval(checkSlot1, 2000);
+const intervalId2 = setInterval(checkSlot2, 2000);
 
-const intervalId2 = setInterval(() => {
-    checkSlot2();
-}, 2000);
 
 /**
  * Graceful shutdown
